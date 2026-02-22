@@ -34,7 +34,7 @@ ax_ = np.newaxis
 lod2_to_lod = lambda lod, arr: arr.mean(axis=(-2,-1)) if lod == 1 else arr
 
 class WritePlugin(WritePluginMixin):
-    def check_config(self, *args, **kwargs):
+    def _setup(self):
         match cfg.simulation.approximation:
             case 'anelastic':
                 self.is_anelastic = True
@@ -43,8 +43,13 @@ class WritePlugin(WritePluginMixin):
             case _:
                 ConfigError('Unknown approximation', cfg.simulation, 'approximation')
 
+    def check_config(self, *args, **kwargs):
+        self._setup()
+
     def write_data(self, fout, *args, **kwargs):
         log('Writing data to dynamic driver')
+
+        self._setup()
 
         dtdefault = cfg.output.default_precision
         filldefault = cfg.output.fill_value
