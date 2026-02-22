@@ -22,10 +22,9 @@
 import numpy as np
 import netCDF4
 
-from palmmeteo import __version__
 from palmmeteo.plugins import WritePluginMixin
 from palmmeteo.logging import die, warn, log, verbose
-from palmmeteo.config import cfg
+from palmmeteo.config import cfg, ConfigError
 from palmmeteo.runtime import rt
 from palmmeteo.library import PalmPhysics
 
@@ -35,8 +34,22 @@ ax_ = np.newaxis
 lod2_to_lod = lambda lod, arr: arr.mean(axis=(-2,-1)) if lod == 1 else arr
 
 class WritePlugin(WritePluginMixin):
+    def _setup(self):
+        match cfg.simulation.approximation:
+            case 'anelastic':
+                self.is_anelastic = True
+            case 'boussinesq':
+                self.is_anelastic = False
+            case _:
+                ConfigError('Unknown approximation', cfg.simulation, 'approximation')
+
+    def check_config(self, *args, **kwargs):
+        self._setup()
+
     def write_data(self, fout, *args, **kwargs):
         log('Writing data to dynamic driver')
+
+        self._setup()
 
         dtdefault = cfg.output.default_precision
         filldefault = cfg.output.fill_value
@@ -155,12 +168,7 @@ class WritePlugin(WritePluginMixin):
                                (areas_xb * ntmask_right).sum() +
                                (areas_yb * ntmask_south).sum() +
                                (areas_yb * ntmask_north).sum() +
-                               areas_zb*rt.nx*rt.ny)
-
-            log('NOTE: mass balancing is only valid for the '
-                    'Boussinesq approximation (PALM default). If '
-                    'approximation=anelastic is set in PALM, the '
-                    'balance will be wrong.')
+                                areas_zb*rt.nx*rt.ny)
 
         log('Writing values for initialization variables')
         with netCDF4.Dataset(rt.paths.intermediate.vinterp) as fin:
@@ -202,6 +210,36 @@ class WritePlugin(WritePluginMixin):
                     fov['ls_forcing_north_qv'][it,:,:] = fiv['init_atmosphere_qv'][it, :, rt.ny-1, :]
                     fov['ls_forcing_top_qv'  ][it,:,:] = fiv['init_atmosphere_qv'][it, rt.nz-1, :, :]
 
+                    if self.is_anelastic:
+                        verbose('Using anelastic approximation for mass balancing')
+
+                        # Calculate air density profile
+                        pres = fiv['palm_hydrostatic_pressure'][it,:]
+                        pt_prof = fiv['init_atmosphere_pt'][it,:,:,:].mean(axis=(1,2))
+                        rho_air = PalmPhysics.rho_air_ideal_gas(pres, pt_prof)
+                        del pres, pt_prof
+
+                        # Multiply boundary grid point areas with air density
+                        bfact_x = areas_xb * rho_air[:,ax_]
+                        bfact_y = areas_yb * rho_air[:,ax_]
+                        bfact_z = areas_zb * rho_air[-1]
+                        area_factors = ((bfact_x * ntmask_left ).sum() +
+                                        (bfact_x * ntmask_right).sum() +
+                                        (bfact_y * ntmask_south).sum() +
+                                        (bfact_y * ntmask_north).sum() +
+                                         bfact_z*rt.nx*rt.ny)
+
+                        verbose('Air density profile (kg/m3): {}', rho_air)
+                        bal_unit1 = 'kg/s'
+                    else:
+                        verbose('Using boussinesq approximation for mass balancing')
+
+                        bfact_x = areas_xb
+                        bfact_y = areas_yb
+                        bfact_z = areas_zb
+                        area_factors = area_boundaries
+                        bal_unit1 = 'm3/s'
+
                     # Perform mass balancing for U, V, W
                     uxleft = fiv['init_atmosphere_u'][it, :, :, 0]
                     uxleft[tmask_left] = 0.
@@ -212,14 +250,14 @@ class WritePlugin(WritePluginMixin):
                     vynorth = fiv['init_atmosphere_v'][it, :, rt.ny-1, :]
                     vynorth[tmask_north] = 0.
                     wztop = fiv['init_atmosphere_w'][it, rt.nz-2, :, :]#nzw=nz-1
-                    mass_disbalance = ((uxleft * areas_xb).sum()
-                        - (uxright * areas_xb).sum()
-                        + (vysouth * areas_yb).sum()
-                        - (vynorth * areas_yb).sum()
-                        - (wztop * areas_zb).sum())
-                    mass_corr_v = mass_disbalance / area_boundaries
-                    log('Mass disbalance: {0:8g} m3/s (avg = {1:8g} m/s)',
-                        mass_disbalance, mass_corr_v)
+                    mass_disbalance = (  (uxleft  * bfact_x).sum()
+                                       - (uxright * bfact_x).sum()
+                                       + (vysouth * bfact_y).sum()
+                                       - (vynorth * bfact_y).sum()
+                                       - (wztop   * bfact_z).sum() )
+                    mass_corr_v = mass_disbalance / area_factors
+                    log('Mass disbalance: {:8g} {} (correction = {:8g} m/s)',
+                        mass_disbalance, bal_unit1, mass_corr_v)
                     uxleft[ntmask_left] -= mass_corr_v
                     uxright[ntmask_right] += mass_corr_v
                     vysouth[ntmask_south] -= mass_corr_v
@@ -228,14 +266,14 @@ class WritePlugin(WritePluginMixin):
 
                     # Verify mass balance
                     if cfg.output.check_mass_balance and cfg.verbosity >= 1:
-                        mass_disbalance = ((uxleft * areas_xb).sum()
-                            - (uxright * areas_xb).sum()
-                            + (vysouth * areas_yb).sum()
-                            - (vynorth * areas_yb).sum()
-                            - (wztop * areas_zb).sum())
-                        mass_corr_v = mass_disbalance / area_boundaries
-                        log('Mass balanced:   {0:8g} m3/s (avg = {1:8g} m/s)',
-                            mass_disbalance, mass_corr_v)
+                        mass_disbalance = (  (uxleft  * bfact_x).sum()
+                                           - (uxright * bfact_x).sum()
+                                           + (vysouth * bfact_y).sum()
+                                           - (vynorth * bfact_y).sum()
+                                           - (wztop   * bfact_z).sum() )
+                        mass_corr_v = mass_disbalance / area_factors
+                        log('Mass balanced:   {:8g} {} (correction = {:8g} m/s)',
+                            mass_disbalance, bal_unit1, mass_corr_v)
 
                     # Write U, V, W
                     fov['ls_forcing_left_u' ][it,:,:] = uxleft

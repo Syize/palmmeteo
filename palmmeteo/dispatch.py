@@ -23,6 +23,7 @@ import sys
 import os
 from datetime import datetime
 from argparse import ArgumentParser
+import importlib.resources
 import threading
 import netCDF4
 
@@ -118,6 +119,16 @@ def run(argv):
     # Set initial verbosity from commandline, so that we can log the
     # configuration progress appropriately.
     configure_log(argv.verbosity_arg if argv.verbosity_arg is not None else 1)
+
+    # Log signature and config
+    try:
+        import socket
+        hostname = socket.gethostname() + ':'
+    except:
+        hostname = ''
+    log('Starting {} installed at {}{}', signature, hostname,
+            importlib.resources.files('palmmeteo'))
+    log('CWD: {}, using config file(s): {}', os.getcwd(), argv.config)
 
     # Load all configfiles and apply commandline config
     workflow = load_config(argv)

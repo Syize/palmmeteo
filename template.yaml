@@ -122,8 +122,10 @@ simulation:
     #timestep: 1 h
     #length: 1 d
 
-    #timestep_rad: auto # default: detect from input files (if possible)
-    #timestep_rad: 10 m # explicit
+    # Approximation used in PALM. This must match PALM's setting, otherwise
+    # mass balancing will be off!
+    #approximation: boussinesq #default in pmeteo as well as in PALM
+    #approximation: anelastic
 
 radiation:
     #enabled: false #off by default, switched on by tasks or manually
