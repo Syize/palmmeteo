@@ -112,6 +112,11 @@ simulation:
     timestep: 1 h
     length: 1 d
 
+    # Approximation used in PALM. This must match PALM's setting, otherwise
+    # mass balancing will be off!
+    approximation: boussinesq #default in pmeteo as well as in PALM
+    #approximation: anelastic
+
 radiation:
     # Off by default (empty so that tasks may overwrite), switched on by tasks or manually
     enabled: ~

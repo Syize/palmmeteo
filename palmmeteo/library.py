@@ -76,7 +76,7 @@ class PalmPhysics:
 
     @classmethod
     def barom_ptn_pres(cls, p0, z, t0):
-        """Compute the barometric formula for 1-D array arguments.
+        """PALM's barometric_formula( z, t_0, p_0 )
 
         The calculation is based on the assumption of a polytropic atmosphere
         and neutral stratification, where the temperature lapse rate is g/cp.
@@ -95,6 +95,14 @@ class PalmPhysics:
         """Reciprocal of the Exner function"""
 
         return (cls.p0/p)**cls.rd_d_cp
+
+    @classmethod
+    def rho_air_ideal_gas(cls, p, pt):
+        """
+        Air density according to ideal gas law from PALM's function
+        ideal_gas_law_rho_pt( p, t )
+        """
+        return p / (cls.r_d * cls.exner(p) * pt)
 
 
 class UnitConverter:
