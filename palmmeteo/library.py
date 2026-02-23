@@ -430,16 +430,16 @@ class AssimCycle:
                         'cycles_used=all', cfgsect, 'reference_cycle')
             self.is_selected = self._is_selected_all
         else:
-            self.cycle_ref = cref
-            if not self.cycle_ref:
+            if cref:
+                self.cycle_ref = utcdefault(cref)
+            else:
                 # Use 00:00 UTC of the first day of simulation
                 self.cycle_ref = midnight_of(rt.simulation.start_time)
 
             if cint == 'single':
                 self.cycle_int = None
                 self.is_selected = self._is_selected_single
-                verbose('Using forecast/assimilaton cycle {}',
-                        self.cycle_ref)
+                verbose('Using forecast/assimilaton cycle {}', self.cycle_ref)
             else:
                 self.cycle_int = parse_duration(cfgsect, 'reference_cycle', cint)
                 self.is_selected = self._is_selected_interval
@@ -510,10 +510,19 @@ class HorizonSelection:
 
     def dt_from_idx(self, idx):
         dt = rt.simulation.start_time + rt.simulation.timestep*(idx+self.idx0)
-        horizon = (dt - self.cycles.cycle_ref - self.horiz_first) % self.cycles.cycle_int
-        horizon += self.horiz_first
-        cycle = dt - horizon
-        return cycle, horizon, dt
+        match self.cycles.cycle_int:
+            case False:
+                # all cycles accepted => cycle unknown
+                return None, None, dt
+            case None:
+                # single cycle
+                return self.cycles.cycle_ref, dt - self.cycles.cycle_ref, dt
+            case interval:
+                # cycle interval
+                horizon = (dt - self.cycles.cycle_ref - self.horiz_first) % interval
+                horizon += self.horiz_first
+                cycle = dt - horizon
+                return cycle, horizon, dt
 
 class NCDates:
     """
