@@ -33,7 +33,7 @@ except ImportError:
     from yaml import SafeLoader
 
 from .logging import die, warn, log, verbose
-from .utils import Workflow
+from .workflow import Workflow
 
 class ConfigError(Exception):
     """

@@ -26,7 +26,8 @@ import numpy as np
 from threading import Thread
 from .logging import die, warn, log, verbose
 from .config import cfg, ConfigError
-from .utils import ax_, distribute_chunks
+from .constants import ax_
+from .chunking import distribute_chunks
 
 interpolators = {}
 

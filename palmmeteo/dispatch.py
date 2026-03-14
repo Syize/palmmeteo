@@ -32,7 +32,7 @@ from . import plugins as plg
 from .logging import die, warn, log, verbose, configure_log
 from .config import load_config, cfg
 from .runtime import rt, basic_init
-from .utils import find_free_fname, assert_dir
+from .fileutils import find_free_fname, assert_dir
 
 
 last_stage_files = []
