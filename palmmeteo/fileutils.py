@@ -7,6 +7,7 @@ This module contains utility functions for working with files and directories.
 import os
 import re
 from typing import Optional
+from .exceptions import FileError
 
 fext_re = re.compile(r'\.(\d{3})$')
 
@@ -51,7 +52,7 @@ def find_free_fname(fpath: str, overwrite: bool = False) -> str:
             continue
         maxnum = max(maxnum, int(m.group(1)))
     if maxnum >= 999:
-        raise RuntimeError('Cannot find free filename starting with ' + fpath)
+        raise FileError('Cannot find free filename starting with ' + fpath, file_path=fpath)
 
     newpath = '{}.{:03d}'.format(fpath, maxnum+1)
     from .logging import log

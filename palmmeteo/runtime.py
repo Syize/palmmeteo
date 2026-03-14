@@ -27,6 +27,7 @@ from typing import Any, Optional
 from . import signature
 from .logging import die, warn, log, verbose
 from .config import cfg, parse_duration, ConfigObj
+from .exceptions import ConfigurationError
 
 zstd = None
 
@@ -179,13 +180,11 @@ def basic_init(rt: RuntimeObj) -> None:
         try:
             code = compile(func, f'<path_string_{key}>', 'eval')
         except SyntaxError as e:
-            die('Syntax error in definition of the path '
-                'string {} "{}": {}.', key, func, e)
+            raise ConfigurationError(f'Syntax error in definition of the path string "{key}": {e}', section='path_strings', key=key)
         try:
             val = eval(code, cfg._settings)
         except Exception as e:
-            die('Error while evaluating the path string {} "{}": {}.', key, func, e)
-            raise
+            raise ConfigurationError(f'Error while evaluating the path string "{key}": {e}', section='path_strings', key=key)
         rt.path_strings[key] = val
 
     paths = rt._get_child('paths')

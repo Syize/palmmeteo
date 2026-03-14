@@ -4,6 +4,8 @@ netcdfutils.py - NetCDF file utilities
 This module contains utility functions for working with NetCDF files.
 """
 
+from .exceptions import DataError
+
 def ensure_dimension(f: Any, dimname: str, dimsize: int) -> Any:
     """
     Creates a dimension in a netCDF file or verifies its size if it already
@@ -33,14 +35,11 @@ def ensure_dimension(f: Any, dimname: str, dimsize: int) -> Any:
     if dimsize is None:
         # Wanted unlimited dim, check that it is
         if not d.isunlimited():
-            raise RuntimeError('Dimension {} is already present and it is '
-                    'not unlimited as requested.'.format(dimname))
+            raise DataError('Dimension {} is already present and it is not unlimited as requested'.format(dimname), variable=dimname)
     else:
         # Fixed size dim - compare sizes
         if len(d) != dimsize:
-            raise RuntimeError('Dimension {} is already present and its '
-                    'size {} differs from requested {}.'.format(dimname,
-                        len(d), dimsize))
+            raise DataError('Dimension {} is already present and its size {} differs from requested {}'.format(dimname, len(d), dimsize), variable=dimname)
     return d
 
 def getvar(f: Any, varname: str, *args: Any, **kwargs: Any) -> Any:

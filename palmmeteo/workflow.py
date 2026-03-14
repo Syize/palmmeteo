@@ -5,6 +5,7 @@ This module contains classes for managing and indexing workflow stages.
 """
 
 from typing import List, Any
+from .exceptions import WorkflowError
 
 class Workflow:
     """
@@ -43,14 +44,13 @@ class Workflow:
         
         Raises
         ------
-        ValueError
+        WorkflowError
             If the stage name is unknown
         """
         try:
             return self.idx[s]
         except KeyError:
-            raise ValueError(f'Unknown workflow stage: "{s}". '
-                             f'Valid workflow stages are: {self.default_stages}.')
+            raise WorkflowError(f'Unknown workflow stage: "{s}". Valid workflow stages are: {self.default_stages}.')
 
     def assign_all(self) -> None:
         """Assign all available stages to the workflow."""
@@ -69,15 +69,14 @@ class Workflow:
         
         Raises
         ------
-        KeyError
+        WorkflowError
             If a stage name is unknown
         """
         try:
             wf1 = self.stage_idx(stage_from) if stage_from else 0
             wf2 = self.stage_idx(stage_to)   if stage_to   else -1
         except KeyError as e:
-            from .logging import die
-            die('Unknown stage: {}', e.args[0])
+            raise WorkflowError(f'Unknown stage: {e.args[0]}')
 
         self.workflow = self.default_stages[wf1:wf2+1]
         if wf1 > 0:
@@ -87,8 +86,7 @@ class Workflow:
         try:
             workflow = [self.stage_idx(s) for s in stages]
         except KeyError as e:
-            from .logging import die
-            die('Unknown stage: {}', e.args[0])
+            raise WorkflowError(f'Unknown stage: {e.args[0]}')
 
         gaps = [i for i in range(1, len(workflow))
                 if workflow[i-1]+1 != workflow[i]]
@@ -108,9 +106,7 @@ class Workflow:
 
         if gaps:
             # Apart from supported case above
-            from .logging import die
-            die('Unsupported non-contiguous workflow! Selected stages {}. '
-                'Complete workflow: {}.', stages, self.default_stages)
+            raise WorkflowError(f'Unsupported non-contiguous workflow! Selected stages {stages}. Complete workflow: {self.default_stages}.')
 
         self.workflow = [self.default_stages[si] for si in workflow]
 

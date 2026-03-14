@@ -21,6 +21,7 @@
 
 import importlib
 from abc import ABCMeta, abstractmethod
+from .exceptions import PluginError
 
 event_hooks = {
 }
@@ -60,8 +61,7 @@ class PluginMeta(ABCMeta):
         for n, o in dct.items():
             if callable(o) and hasattr(o, '_event'):
                 if o._event in event_hooks:
-                    raise ValueError(
-                        'Hook already defined for event {}'.format(o._event))
+                    raise PluginError(f'Hook already defined for event {o._event}')
 
                 event_hooks[o._event] = {'class': name, 'method': n}
 

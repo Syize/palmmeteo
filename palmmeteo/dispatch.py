@@ -33,6 +33,7 @@ from .logging import die, warn, log, verbose, configure_log
 from .config import load_config, cfg
 from .runtime import rt, basic_init
 from .fileutils import find_free_fname, assert_dir
+from .exceptions import ConfigurationError
 
 
 last_stage_files = []
@@ -124,8 +125,8 @@ def run(argv):
     try:
         import socket
         hostname = socket.gethostname() + ':'
-    except:
-        hostname = ''
+    except Exception as e:
+        raise ConfigurationError(f'Could not get hostname: {e}')
     log('Starting {} installed at {}{}', signature, hostname,
             importlib.resources.files('palmmeteo'))
     log('CWD: {}, using config file(s): {}', os.getcwd(), argv.config)

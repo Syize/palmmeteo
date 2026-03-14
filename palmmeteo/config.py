@@ -34,48 +34,9 @@ except ImportError:
 
 from .logging import die, warn, log, verbose
 from .workflow import Workflow
+from .exceptions import ConfigurationError
 
-class ConfigError(Exception):
-    """
-    Exception raised for configuration errors.
-
-    This exception class provides detailed information about configuration
-    errors, including the error description, section, and key where the
-    error occurred.
-    """
-    
-    def __init__(self, desc: str, section: Optional['ConfigObj'] = None, key: Optional[str] = None):
-        """
-        Initialize a ConfigError instance.
-
-        Parameters
-        ----------
-        desc : str
-            Error description
-        section : ConfigObj, optional
-            Configuration section where the error occurred
-        key : str, optional
-            Configuration key where the error occurred
-        """
-        self.desc = desc
-        self.section = section
-        self.key = key
-
-        # Build message
-        s = ['Configuration error: ', desc]
-        if section:
-            s.extend([', item: ', ':'.join(section._get_path()+[key])])
-            try:
-                v = section._settings[key]
-            except KeyError:
-                s.append(', missing value')
-            else:
-                s.extend([', value=', str(v)])
-        s.append('.')
-        self.msg = ''.join(s)
-
-    def __str__(self):
-        return self.msg
+from .exceptions import ConfigurationError
 
 class ConfigObj(object):
     """
@@ -163,16 +124,16 @@ class ConfigObj(object):
                 try:
                     vl._ingest_dict(v, overwrite, extend, do_check_exist)
                 except AttributeError:
-                    raise ConfigError('Trying to replace a non-dictionary '
-                            'setting with a dictionary', self, k)
+                    raise ConfigurationError('Trying to replace a non-dictionary '
+                            'setting with a dictionary', section=':'.join(self._get_path()), key=k)
             elif extend and isinstance(v, list):
                 # We extend lists if requested
                 vl = self._settings.setdefault(k, [])
                 try:
                     vl.extend(v)
                 except AttributeError:
-                    raise ConfigError('Trying to extend a non-list setting with '
-                            'a list', self, k)
+                    raise ConfigurationError('Trying to extend a non-list setting with '
+                            'a list', section=':'.join(self._get_path()), key=k)
             elif v is None and isinstance(self._settings.get(k), ConfigObj):
                 # This is a special case: we are replacing an existing section
                 # with None. That most probably means that the user has
@@ -228,9 +189,9 @@ duration_units = {
 
 def parse_duration(section: 'ConfigObj', item: str, value: Optional[str] = None) -> datetime.timedelta:
     def err():
-        raise ConfigError('Bad specification of duration. The correct format is '
+        raise ConfigurationError('Bad specification of duration. The correct format is '
                 '{num} {unit} [{num} {unit} ...], where {unit} is one of d, h, '
-                'm, s. Example: "1 m 3.2 s".', section, item)
+                'm, s. Example: "1 m 3.2 s".', section=':'.join(section._get_path()), key=item)
 
     if value is None:
         try:
@@ -327,7 +288,7 @@ def load_config(argv: Any) -> Workflow:
 
     # Basic verification
     if not cfg.case:
-        raise ConfigError('Case name must be specified', cfg, 'case')
+        raise ConfigurationError('Case name must be specified', section='', key='case')
 
     return workflow
 

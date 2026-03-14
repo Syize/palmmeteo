@@ -13,6 +13,7 @@ from .constants import ax_, rad
 from .physics import PalmPhysics
 from .logging import die, warn, log, verbose
 from .sliceutils import SliceBoolExtender
+from .exceptions import InterpolationError
 
 def barycentric(tri, pt, isimp):
     """Calculate barycentric coordinates of a multi-dimensional point set
@@ -59,7 +60,7 @@ class TriRegridder:
         self.ndim = len(ptmask_full.shape)
         self.npt = ptmask_full.sum()
         if not self.npt:
-            raise ValueError('No points for target area found in the input data!')
+            raise InterpolationError('No points for target area found in the input data!')
 
         # Multidimensional coordinates. Needs per-dimension slices for
         # efficient loading from NetCDF.

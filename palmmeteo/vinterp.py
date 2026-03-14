@@ -25,7 +25,8 @@ import sys
 import numpy as np
 from threading import Thread
 from .logging import die, warn, log, verbose
-from .config import cfg, ConfigError
+from .config import cfg
+from .exceptions import ConfigurationError, InterpolationError
 from .constants import ax_
 from .chunking import distribute_chunks
 
@@ -52,7 +53,7 @@ def get_vinterp(ztarget, zsource, linear=True, wind=True):
     try:
         ipol = interpolators[cfg.vinterp.interpolator]
     except KeyError:
-        raise ConfigError('Unknown interpolator', cfg.vinterp, 'interpolator')
+        raise ConfigurationError('Unknown interpolator', section='vinterp', key='interpolator')
 
     res = []
 
@@ -163,9 +164,8 @@ class VInterpFortranThread:
         # Call native interpolator
         self.aout, err = self.linear(self.ain, self.zsource, self.ztarget)
         if err:
-            raise ValueError(('Error {4}: requested heights ({0}, {1}) lie outside '
-                'provided heights ({2}, {3}).').format(ztarget[0],
-                    ztarget[-1], zsource[0].max(), zsource[-1].min(), err))
+            raise InterpolationError(('Requested heights ({0}, {1}) lie outside provided heights ({2}, {3}).').format(ztarget[0],
+                    ztarget[-1], zsource[0].max(), zsource[-1].min()), method='fortran')
 
     def put(self, out):
         """Write results to global array"""
@@ -187,9 +187,8 @@ def get_vinterp_fortran(ztarget, zsource):
             # Call native interpolator
             aout, err = zinterp.linear(ain, zsource, ztarget)
             if err:
-                raise ValueError(('Error {4}: requested heights ({0}, {1}) lie outside '
-                    'provided heights ({2}, {3}).').format(ztarget[0],
-                        ztarget[-1], zsource[0].max(), zsource[-1].min(), err))
+                raise InterpolationError(('Requested heights ({0}, {1}) lie outside provided heights ({2}, {3}).').format(ztarget[0],
+                        ztarget[-1], zsource[0].max(), zsource[-1].min()), method='fortran')
             return aout
 
         return vinterp_serial

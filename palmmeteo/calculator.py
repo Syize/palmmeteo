@@ -6,6 +6,7 @@ handling loaded variables, preprocessors, and validations.
 """
 
 from .units import LoadedQuantity, UnitConverter, InputUnitsInfo
+from .exceptions import ConfigurationError, DataError, CalculationError
 
 class QuantityCalculator:
     def __init__(self, quantities, var_defs, preprocessors, regridder):
@@ -38,16 +39,12 @@ class QuantityCalculator:
                     try:
                         prs = preprocessors[pp]
                     except KeyError:
-                        from .logging import die
-                        die('Requested input preprocessor {} not found in '
-                                'configured variable definitions.', pp)
+                        raise ConfigurationError('Requested input preprocessor {} not found in configured variable definitions'.format(pp))
                     try:
                         self.preprocessors[pp] = compile(prs,
                                 '<quantity_preprocessor_{}>'.format(pp), 'exec')
                     except SyntaxError:
-                        from .logging import die
-                        die('Syntax error in definition of the input '
-                                'preprocessor {}: "{}".', pp, prs)
+                        raise ConfigurationError('Syntax error in definition of the input preprocessor {}: "{}"'.format(pp, prs))
 
             for val in getattr(vdef, 'validations', []):
                 if val not in self.validations:
@@ -55,9 +52,7 @@ class QuantityCalculator:
                         self.validations[val] = compile(val,
                                 '<quantity_validation>', 'eval')
                     except SyntaxError:
-                        from .logging import die
-                        die('Syntax error in definition of the input '
-                                'validation: "{}".', val)
+                        raise ConfigurationError('Syntax error in definition of the input validation: "{}"'.format(val))
 
             q.attrs = {}
             if 'molar_mass' in vdef:
@@ -68,9 +63,7 @@ class QuantityCalculator:
             try:
                 q.code = compile(q.formula, '<quantity_formula_{}>'.format(qname), 'eval')
             except SyntaxError:
-                from .logging import die
-                die('Syntax error in definition of the quantity '
-                        '{} formula: "{}".', qname, q.formula)
+                raise ConfigurationError('Syntax error in definition of the quantity {} formula: "{}"'.format(qname, q.formula))
             self.quantities.append(q)
 
     @staticmethod
@@ -78,9 +71,7 @@ class QuantityCalculator:
         try:
             return var_defs[qname]
         except KeyError:
-            from .logging import die
-            die('Requested quantity {} not found in configured '
-                    'quantity definitions.', qname)
+            raise ConfigurationError('Requested quantity {} not found in configured quantity definitions'.format(qname))
 
     @classmethod
     def get_loaded_vars(cls, quantities, var_defs):
@@ -115,17 +106,23 @@ class QuantityCalculator:
 
     def validate_timestep(self, tsdata):
         for vs, val in self.validations.items():
-            if not eval(val, tsdata):
-                from .logging import die
-                die('Input validation {} failed!', vs)
+            try:
+                if not eval(val, tsdata):
+                    raise DataError(f'Input validation {vs} failed!')
+            except Exception as e:
+                raise CalculationError(f'Validation {vs} failed: {e}')
 
     def calc_timestep_species(self, tsdata):
         for pp in self.preprocessors.values():
-            exec(pp, tsdata)
+            try:
+                exec(pp, tsdata)
+            except Exception as e:
+                raise CalculationError(f'Preprocessor execution failed: {e}')
 
         for q in self.quantities:
-            value = eval(q.code, tsdata)
-            unit = q.unit
+            try:
+                value = eval(q.code, tsdata)
+                unit = q.unit
 
             # Assign default unit with directly loaded variables
             if unit is None:

@@ -10,7 +10,8 @@ import datetime
 import numpy as np
 import netCDF4
 
-from .config import parse_duration, ConfigError
+from .config import parse_duration
+from .exceptions import ConfigurationError
 from .timeutils import midnight_of, NotWholeTimestep, utc, utcdefault
 from .logging import verbose
 from .runtime import rt
@@ -25,8 +26,8 @@ class AssimCycle:
         if cint == 'all':
             self.cycle_int = False
             if cref:
-                raise ConfigError('Reference cycle cannot be specified for '
-                        'cycles_used=all', cfgsect, 'reference_cycle')
+                raise ConfigurationError('Reference cycle cannot be specified for '
+                        'cycles_used=all', section='', key='reference_cycle')
             self.is_selected = self._is_selected_all
         else:
             if cref:
