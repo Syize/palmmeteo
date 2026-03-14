@@ -8,7 +8,7 @@ in various formats (grid points, distance, domain percentages, degrees).
 import re
 import numpy as np
 from typing import Tuple, Union
-from .exceptions import DataError
+from ..exceptions import DataError
 
 pos_re = re.compile(r'''^\s*
         (

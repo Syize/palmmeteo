@@ -15,12 +15,12 @@ warnings.warn(
 )
 
 # Import all classes and functions from the new modules to maintain compatibility
-from .physics import PalmPhysics
-from .units import UnitConverter, InputUnitsInfo, LoadedQuantity
-from .calculator import QuantityCalculator
-from .regridder import barycentric, TriRegridder, verify_palm_hinterp, parse_linspace, LatLonRegularGrid
-from .time import AssimCycle, HorizonSelection, NCDates
-from .io import InputGatherer
+from .physics.physics import PalmPhysics
+from .utils.units import UnitConverter, InputUnitsInfo, LoadedQuantity
+from .data.calculator import QuantityCalculator
+from .interpolation.regridder import barycentric, TriRegridder, verify_palm_hinterp, parse_linspace, LatLonRegularGrid
+from .utils.time import AssimCycle, HorizonSelection, NCDates
+from .data.io import InputGatherer
 
 __all__ = [
     'PalmPhysics',

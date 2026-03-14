@@ -9,11 +9,11 @@ interpolation.
 import numpy as np
 from scipy.spatial import Delaunay
 
-from .constants import ax_, rad
-from .physics import PalmPhysics
-from .logging import die, warn, log, verbose
-from .sliceutils import SliceBoolExtender
-from .exceptions import InterpolationError
+from ..utils.constants import ax_, rad
+from ..physics import PalmPhysics
+from ..logging import die, warn, log, verbose
+from ..utils.sliceutils import SliceBoolExtender
+from ..exceptions import InterpolationError
 
 def barycentric(tri, pt, isimp):
     """Calculate barycentric coordinates of a multi-dimensional point set
@@ -110,7 +110,7 @@ class TriRegridder:
 
 def verify_palm_hinterp(regridder, lats, lons):
     """Regrids source lat+lon coordinates to PALM coordinates using the regridder and verifies the result."""
-    from .runtime import rt
+    from ..core.runtime import rt
 
     diff = regridder.regrid(lats) - rt.palm_grid_lat
     log('Regridder verification for latitudes:  Error [deg]: {:9.3g} .. {:9.3g} '
@@ -151,9 +151,9 @@ class LatLonRegularGrid:
 
     def __init__(self, lats, lons):
         lat_base, lat_step, lat_dstep = parse_linspace(lats,
-                'input grid latitudes', __import__('palmmeteo.config').cfg.hinterp.max_input_grid_error)
+                'input grid latitudes', __import__('palmmeteo.core.config').core.config.cfg.hinterp.max_input_grid_error)
         lon_base, lon_step, lon_dstep = parse_linspace(lons,
-                'input grid longitudes', __import__('palmmeteo.config').cfg.hinterp.max_input_grid_error)
+                'input grid longitudes', __import__('palmmeteo.core.config').core.config.cfg.hinterp.max_input_grid_error)
 
         self.latlon_to_ji = lambda lat, lon: ((lat-lat_base)*lat_dstep, (lon-lon_base)*lon_dstep)
         self.ji_to_latlon = lambda j, i: (j*lat_step+lat_base, i*lon_step+lon_base)

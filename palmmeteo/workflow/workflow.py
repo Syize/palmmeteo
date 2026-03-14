@@ -5,7 +5,7 @@ This module contains classes for managing and indexing workflow stages.
 """
 
 from typing import List, Any
-from .exceptions import WorkflowError
+from ..exceptions import WorkflowError
 
 class Workflow:
     """
@@ -95,7 +95,7 @@ class Workflow:
             after = workflow[gaps[0]]
             if before in ([0], [0,1]) and after >= 2:
                 self.snapshot_from = self.default_stages[after-1]
-                from .logging import warn
+                from ..logging import warn
                 warn('Partially supported non-continuous workflow. Snapshot '
                      'will be loaded from stage {}. Success is not '
                      'guaranteed.', self.snapshot_from)

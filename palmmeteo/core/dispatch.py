@@ -27,13 +27,13 @@ import importlib.resources
 import threading
 import netCDF4
 
-from . import __doc__, __version__, signature
-from . import plugins as plg
-from .logging import die, warn, log, verbose, configure_log
+from .. import __doc__, __version__, signature
+from ..plugins import plugins as plg
+from ..logging import die, warn, log, verbose, configure_log
 from .config import load_config, cfg
 from .runtime import rt, basic_init
-from .fileutils import find_free_fname, assert_dir
-from .exceptions import ConfigurationError
+from ..utils.fileutils import find_free_fname, assert_dir
+from ..exceptions import ConfigurationError
 
 
 last_stage_files = []

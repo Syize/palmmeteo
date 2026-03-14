@@ -24,10 +24,10 @@ import os
 import pickle
 from typing import Any, Optional
 
-from . import signature
-from .logging import die, warn, log, verbose
+from .. import signature
+from ..logging import die, warn, log, verbose
 from .config import cfg, parse_duration, ConfigObj
-from .exceptions import ConfigurationError
+from ..exceptions import ConfigurationError
 
 zstd = None
 

@@ -21,7 +21,7 @@
 
 import importlib
 from abc import ABCMeta, abstractmethod
-from .exceptions import PluginError
+from ..exceptions import PluginError
 
 event_hooks = {
 }

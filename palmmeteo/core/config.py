@@ -32,11 +32,9 @@ try:
 except ImportError:
     from yaml import SafeLoader
 
-from .logging import die, warn, log, verbose
-from .workflow import Workflow
-from .exceptions import ConfigurationError
-
-from .exceptions import ConfigurationError
+from ..logging import die, warn, log, verbose
+from ..workflow import Workflow
+from ..exceptions import ConfigurationError
 
 class ConfigObj(object):
     """

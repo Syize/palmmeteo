@@ -98,11 +98,11 @@ class InputGatherer:
             self.filled = np.array(self.filled)
             self.fout.createVariable(self.level_dimname, self.levels.dtype,
                                      (self.level_dimname,))[:] = self.levels
-            from .logging import verbose
+            from ..logging import verbose
             verbose('Loaded levels: {}', self.levels)
 
         if not self.filled.all():
-            from .logging import die
+            from ..logging import die
             pp = [self._pprint_missing(self.filled, 2, 'variable', self.varnames),
                   self._pprint_missing(self.filled, 1, 'time')]
             if self.dyn_levels:

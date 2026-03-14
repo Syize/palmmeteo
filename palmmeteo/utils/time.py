@@ -10,11 +10,11 @@ import datetime
 import numpy as np
 import netCDF4
 
-from .config import parse_duration
-from .exceptions import ConfigurationError
+from ..core.config import parse_duration
+from ..exceptions import ConfigurationError
 from .timeutils import midnight_of, NotWholeTimestep, utc, utcdefault
-from .logging import verbose
-from .runtime import rt
+from ..logging import verbose
+from ..core.runtime import rt
 
 class AssimCycle:
     """List of selected assimilation cycles based on configuration"""

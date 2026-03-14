@@ -24,11 +24,11 @@
 import sys
 import numpy as np
 from threading import Thread
-from .logging import die, warn, log, verbose
-from .config import cfg
-from .exceptions import ConfigurationError, InterpolationError
-from .constants import ax_
-from .chunking import distribute_chunks
+from ..logging import die, warn, log, verbose
+from ..core.config import cfg
+from ..exceptions import ConfigurationError, InterpolationError
+from ..utils.constants import ax_
+from ..utils.chunking import distribute_chunks
 
 interpolators = {}
 

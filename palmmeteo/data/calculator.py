@@ -5,8 +5,8 @@ This module contains classes for calculating quantities from formulas and
 handling loaded variables, preprocessors, and validations.
 """
 
-from .units import LoadedQuantity, UnitConverter, InputUnitsInfo
-from .exceptions import ConfigurationError, DataError, CalculationError
+from ..utils.units import LoadedQuantity, UnitConverter, InputUnitsInfo
+from ..exceptions import ConfigurationError, DataError, CalculationError
 
 class QuantityCalculator:
     def __init__(self, quantities, var_defs, preprocessors, regridder):
@@ -90,7 +90,7 @@ class QuantityCalculator:
         for vn in self.loaded_vars:
             if vn in tsdata:
                 if vn in f.variables:
-                    from .logging import die
+                    from ..logging import die
                     die('Error: duplicate input variable {}.', vn)
             else:
                 try:

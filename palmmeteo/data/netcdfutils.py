@@ -4,7 +4,7 @@ netcdfutils.py - NetCDF file utilities
 This module contains utility functions for working with NetCDF files.
 """
 
-from .exceptions import DataError
+from ..exceptions import DataError
 
 def ensure_dimension(f: Any, dimname: str, dimsize: int) -> Any:
     """

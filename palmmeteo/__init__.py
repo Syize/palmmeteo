@@ -22,6 +22,6 @@ except ModuleNotFoundError:
 
 signature = f'PALM-meteo version {__version__}'
 
-from .config import cfg
-from .runtime import rt
-from .dispatch import run, main
+from .core.config import cfg
+from .core.runtime import rt
+from .core.dispatch import run, main
