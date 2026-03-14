@@ -24,6 +24,7 @@ import datetime
 from collections import defaultdict
 import importlib.resources
 import pkgutil
+from typing import Any, Dict, List, Optional, Iterator
 
 from yaml import load
 try:
@@ -35,7 +36,27 @@ from .logging import die, warn, log, verbose
 from .utils import Workflow
 
 class ConfigError(Exception):
-    def __init__(self, desc, section=None, key=None):
+    """
+    Exception raised for configuration errors.
+
+    This exception class provides detailed information about configuration
+    errors, including the error description, section, and key where the
+    error occurred.
+    """
+    
+    def __init__(self, desc: str, section: Optional['ConfigObj'] = None, key: Optional[str] = None):
+        """
+        Initialize a ConfigError instance.
+
+        Parameters
+        ----------
+        desc : str
+            Error description
+        section : ConfigObj, optional
+            Configuration section where the error occurred
+        key : str, optional
+            Configuration key where the error occurred
+        """
         self.desc = desc
         self.section = section
         self.key = key
@@ -57,7 +78,8 @@ class ConfigError(Exception):
         return self.msg
 
 class ConfigObj(object):
-    """A recursive object within a hierarchical configuration, representing
+    """
+    A recursive object within a hierarchical configuration, representing
     a (sub)section as a dictionary from the YAML configuration file. Child
     nodes may be accessed both by the dot notation (section.setting) and the
     item notation (section['setting']).
@@ -68,12 +90,22 @@ class ConfigObj(object):
     # method names (mostly used internally anyway) start with an underscore.
     __slots__ = ['_parent', '_name', '_settings']
 
-    def __init__(self, parent=None, name=None):
+    def __init__(self, parent: Optional['ConfigObj'] = None, name: Optional[str] = None):
+        """
+        Initialize a ConfigObj instance.
+
+        Parameters
+        ----------
+        parent : ConfigObj, optional
+            Parent configuration object
+        name : str, optional
+            Name of this configuration section
+        """
         self._parent = parent
         self._name = name
-        self._settings = {}
+        self._settings: Dict[str, Any] = {}
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         try:
             return self._settings[name]
         except KeyError:
@@ -81,7 +113,7 @@ class ConfigObj(object):
                     'configuration setting in section {}.'.format(name,
                         ':'.join(self._get_path())))
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         try:
             return self._settings[key]
         except KeyError:
@@ -89,13 +121,28 @@ class ConfigObj(object):
                     'setting in section {}.'.format(key,
                         ':'.join(self._get_path())))
 
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:
         return key in self._settings
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Any]:
         return iter(self._settings.items())
 
-    def _ingest_dict(self, d, overwrite=True, extend=False, check_exist=False):
+    def _ingest_dict(self, d: Dict[str, Any], overwrite: bool = True, 
+                   extend: bool = False, check_exist: bool = False) -> None:
+        """
+        Ingest a dictionary into the configuration object.
+
+        Parameters
+        ----------
+        d : dict
+            Dictionary to ingest
+        overwrite : bool, optional
+            Whether to overwrite existing values, by default True
+        extend : bool, optional
+            Whether to extend lists instead of replacing them, by default False
+        check_exist : bool, optional
+            Whether to check if settings exist before overwriting, by default False
+        """
         for k, v in d.items():
             if isinstance(v, ConfigObj):
                 # we are actually ingesting a subtree - replace by its dict
@@ -149,8 +196,9 @@ class ConfigObj(object):
                     if self._settings.get(k, None) is None:
                         self._settings[k] = v
 
-    def _ingest_module_config(self, modname):
-        """Locates the initial configuration file config_init.yaml within module
+    def _ingest_module_config(self, modname: str) -> None:
+        """
+        Locates the initial configuration file config_init.yaml within module
         code and ingests it.
         """
         fpath = importlib.resources.files(modname).joinpath('config_init.yaml')
@@ -178,7 +226,7 @@ duration_units = {
         's': 'seconds',
         }
 
-def parse_duration(section, item, value=None):
+def parse_duration(section: 'ConfigObj', item: str, value: Optional[str] = None) -> datetime.timedelta:
     def err():
         raise ConfigError('Bad specification of duration. The correct format is '
                 '{num} {unit} [{num} {unit} ...], where {unit} is one of d, h, '
@@ -216,8 +264,9 @@ def parse_duration(section, item, value=None):
     return datetime.timedelta(**d)
 
 
-def load_config(argv):
-    """Loads all configuration.
+def load_config(argv: Any) -> Workflow:
+    """
+    Loads all configuration.
 
     Configuration is loaded in this order:
     1) initial configuration values

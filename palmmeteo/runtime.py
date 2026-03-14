@@ -22,6 +22,7 @@
 import sys
 import os
 import pickle
+from typing import Any, Optional
 
 from . import signature
 from .logging import die, warn, log, verbose
@@ -29,7 +30,29 @@ from .config import cfg, parse_duration, ConfigObj
 
 zstd = None
 
-def myopen(fpath, *args, **kwargs):
+def myopen(fpath: str, *args: Any, **kwargs: Any) -> Any:
+    """
+    Open a file, supporting zstandard compression.
+
+    Parameters
+    ----------
+    fpath : str
+        Path to the file to open
+    *args : Any
+        Positional arguments to pass to the underlying open function
+    **kwargs : Any
+        Keyword arguments to pass to the underlying open function
+
+    Returns
+    -------
+    file object
+        Opened file object
+
+    Notes
+    -----
+    If the file path ends with .zst, it will be decompressed using zstandard
+    compression. The zstd module is dynamically imported when needed.
+    """
     global zstd
 
     if fpath.endswith('.zst'):
@@ -43,12 +66,28 @@ def myopen(fpath, *args, **kwargs):
         return open(fpath, *args, **kwargs)
 
 class RuntimeObj:
-    """An object for holding runtime-related values.
+    """
+    An object for holding runtime-related values that may be nested.
 
-    May be nested.
+    This class provides a simple way to store and access runtime data in
+    a hierarchical structure. It supports saving and loading snapshots of
+    its state using pickle serialization.
     """
 
-    def _get_child(self, child_name):
+    def _get_child(self, child_name: str) -> 'RuntimeObj':
+        """
+        Get or create a child RuntimeObj instance.
+
+        Parameters
+        ----------
+        child_name : str
+            Name of the child object to get or create
+
+        Returns
+        -------
+        RuntimeObj
+            Child RuntimeObj instance
+        """
         try:
             return self.__dict__[child_name]
         except KeyError:
@@ -56,7 +95,15 @@ class RuntimeObj:
             self.__dict__[child_name] = newchild
             return newchild
 
-    def _save(self, fpath):
+    def _save(self, fpath: str) -> None:
+        """
+        Save the current state of the RuntimeObj to a file.
+
+        Parameters
+        ----------
+        fpath : str
+            Path to the file where the snapshot should be saved
+        """
         log('Saving snapshot to {}', fpath)
         with myopen(fpath, 'wb') as f:
             p = pickle.Pickler(f, protocol=cfg.intermediate_files.pickle_protocol,
@@ -76,7 +123,15 @@ class RuntimeObj:
                             verbose('{}:\tlength {}, {} bytes (sys).', k, l, sys.getsizeof(v))
         verbose('Snapshot saved.')
 
-    def _load(self, fpath):
+    def _load(self, fpath: str) -> None:
+        """
+        Load a saved snapshot of the RuntimeObj from a file.
+
+        Parameters
+        ----------
+        fpath : str
+            Path to the file containing the saved snapshot
+        """
         log('Loading snapshot from {}', fpath)
         with myopen(fpath, 'rb') as f:
             p = pickle.Unpickler(f, fix_imports=False)
@@ -87,12 +142,27 @@ class RuntimeObj:
         else:
             warn('Loaded snapshot version "{}" does not match current '
                  'version "{}", errors may follow!', sig_loaded, signature)
-        assert(isinstance(loaded, dict))
+        assert isinstance(loaded, dict)
         self.__dict__.update(loaded)
 
-def basic_init(rt):
-    """Performs initializaiton of basic values from config."""
+def basic_init(rt: RuntimeObj) -> None:
+    """
+    Performs initialization of basic values from configuration.
 
+    Parameters
+    ----------
+    rt : RuntimeObj
+        Runtime object to initialize
+
+    Notes
+    -----
+    This function initializes several key runtime values from the
+    configuration, including:
+    - Simulation times (timestep, length, radiation timestep)
+    - Paths and path strings
+    - Domain properties (nested domain, stretching)
+    - Debugging settings
+    """
     # Times
     simulation = rt._get_child('simulation')
     simulation.timestep = parse_duration(cfg.simulation, 'timestep')
@@ -107,7 +177,7 @@ def basic_init(rt):
     rt.path_strings = {}
     for key, func in cfg.path_strings:
         try:
-            code = compile(func, '<path_string_{}>'.format(key), 'eval')
+            code = compile(func, f'<path_string_{key}>', 'eval')
         except SyntaxError as e:
             die('Syntax error in definition of the path '
                 'string {} "{}": {}.', key, func, e)
@@ -138,5 +208,5 @@ def basic_init(rt):
     for dname, don in cfg.debug:
         setattr(debug, dname, isall or don)
 
-# Global object
+# Global runtime object
 rt = RuntimeObj()
