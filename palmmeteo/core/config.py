@@ -35,147 +35,7 @@ except ImportError:
 from ..logging import die, warn, log, verbose
 from ..workflow import Workflow
 from ..exceptions import ConfigurationError
-
-class ConfigObj(object):
-    """
-    A recursive object within a hierarchical configuration, representing
-    a (sub)section as a dictionary from the YAML configuration file. Child
-    nodes may be accessed both by the dot notation (section.setting) and the
-    item notation (section['setting']).
-    """
-    # We use __slots__ because we intend to hardly limit (and control) instance
-    # members, so that we do not break many potential names of actual settings
-    # that are accessed using the dot notation. For the same reason, member and
-    # method names (mostly used internally anyway) start with an underscore.
-    __slots__ = ['_parent', '_name', '_settings']
-
-    def __init__(self, parent: Optional['ConfigObj'] = None, name: Optional[str] = None):
-        """
-        Initialize a ConfigObj instance.
-
-        Parameters
-        ----------
-        parent : ConfigObj, optional
-            Parent configuration object
-        name : str, optional
-            Name of this configuration section
-        """
-        self._parent = parent
-        self._name = name
-        self._settings: Dict[str, Any] = {}
-
-    def __getattr__(self, name: str) -> Any:
-        try:
-            return self._settings[name]
-        except KeyError:
-            raise AttributeError('Attribute {} not found. Possibly a missing '
-                    'configuration setting in section {}.'.format(name,
-                        ':'.join(self._get_path())))
-
-    def __getitem__(self, key: str) -> Any:
-        try:
-            return self._settings[key]
-        except KeyError:
-            raise KeyError('Key {} not found. Possibly a missing configuration '
-                    'setting in section {}.'.format(key,
-                        ':'.join(self._get_path())))
-
-    def __contains__(self, key: str) -> bool:
-        return key in self._settings
-
-    def __iter__(self) -> Iterator[Any]:
-        return iter(self._settings.items())
-
-    def _ingest_dict(self, d: Dict[str, Any], overwrite: bool = True, 
-                   extend: bool = False, check_exist: bool = False) -> None:
-        """
-        Ingest a dictionary into the configuration object.
-
-        Parameters
-        ----------
-        d : dict
-            Dictionary to ingest
-        overwrite : bool, optional
-            Whether to overwrite existing values, by default True
-        extend : bool, optional
-            Whether to extend lists instead of replacing them, by default False
-        check_exist : bool, optional
-            Whether to check if settings exist before overwriting, by default False
-        """
-        for k, v in d.items():
-            if isinstance(v, ConfigObj):
-                # we are actually ingesting a subtree - replace by its dict
-                v = v._settings
-
-            if isinstance(v, dict):
-                # For a dictionary (top-level or with only dictionaries above,
-                # i.e. a subsection), we recurse
-                do_check_exist = check_exist
-                try:
-                    vl = self._settings[k]
-                except KeyError:
-                    # not yet present: create a new empty child node
-                    vl = ConfigObj(self, k)
-                    self._settings[k] = vl
-                    if self._settings.get('__user_expandable__', False):
-                        do_check_exist = False
-                try:
-                    vl._ingest_dict(v, overwrite, extend, do_check_exist)
-                except AttributeError:
-                    raise ConfigurationError('Trying to replace a non-dictionary '
-                            'setting with a dictionary', section=':'.join(self._get_path()), key=k)
-            elif extend and isinstance(v, list):
-                # We extend lists if requested
-                vl = self._settings.setdefault(k, [])
-                try:
-                    vl.extend(v)
-                except AttributeError:
-                    raise ConfigurationError('Trying to extend a non-list setting with '
-                            'a list', section=':'.join(self._get_path()), key=k)
-            elif v is None and isinstance(self._settings.get(k), ConfigObj):
-                # This is a special case: we are replacing an existing section
-                # with None. That most probably means that the user has
-                # presented an empty section (possibly with all values
-                # commented out). In that case, we do not want to erase that
-                # section. To actually erase a whole section, the user can
-                # still present empty dictionary using the following syntax:
-                # section_name: {}
-                pass
-            else:
-                # Non-extended lists and all other objects are considered as
-                # values and they are copied as-is (including their subtrees if
-                # present). Non-null values are overwritten only if
-                # overwrite=True.
-                if overwrite:
-                    if check_exist and k not in self._settings:
-                        warn('WARNING: ignoring an unknown setting {}={}.',
-                                ':'.join(self._get_path()+[k]), v)
-                    self._settings[k] = v
-                else:
-                    if self._settings.get(k, None) is None:
-                        self._settings[k] = v
-
-    def _ingest_module_config(self, modname: str) -> None:
-        """
-        Locates the initial configuration file config_init.yaml within module
-        code and ingests it.
-        """
-        fpath = importlib.resources.files(modname).joinpath('config_init.yaml')
-
-        if not fpath.is_file():
-            die('Cannot find initial configuration for package {}! Expected at {}.',
-                modname, fpath)
-
-        verbose('Loading {} configuration from {}', modname, fpath)
-        with fpath.open('r') as f:
-            cfg._ingest_dict(load(f, Loader=SafeLoader))
-
-    def _get_path(self):
-        if self._parent is None:
-            return []
-        path = self._parent._get_path()
-        path.append(self._name)
-        return path
+from .config_model import ConfigObj
 
 
 duration_units = {
@@ -258,19 +118,19 @@ def load_config(argv: Any) -> Workflow:
     # apply settings for selected tasks
     for task in cfg.tasks:
         try:
-            task_set = cfg.task_config._settings[task]
+            task_set = cfg.task_config[task]
         except KeyError:
             die('Unknown task: "{}". Available tasks are: {}', task,
-                    ', '.join(cfg.task_config._settings.keys()))
+                    ', '.join(cfg.task_config.root.keys()))
 
         if task_set.set:
-            cfg._ingest_dict(task_set.set._settings, overwrite=False, extend=False)
+            cfg._ingest_dict(task_set.set.root, overwrite=False, extend=False)
         if task_set.extend:
-            cfg._ingest_dict(task_set.extend._settings, overwrite=False, extend=True)
+            cfg._ingest_dict(task_set.extend.root, overwrite=False, extend=True)
 
     # load extra settings from commandline
     if argv.verbosity_arg is not None:
-        cfg._settings['verbosity'] = argv.verbosity_arg
+        cfg.root['verbosity'] = argv.verbosity_arg
 
     # process workflow
     workflow = Workflow(cfg.full_workflow)
@@ -291,4 +151,4 @@ def load_config(argv: Any) -> Workflow:
     return workflow
 
 
-cfg = ConfigObj()
+cfg = ConfigObj(__root__={})
