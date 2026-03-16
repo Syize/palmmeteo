@@ -5,8 +5,11 @@ This module contains classes for calculating quantities from formulas and
 handling loaded variables, preprocessors, and validations.
 """
 
+import numpy as np
+
 from ..utils.units import LoadedQuantity, UnitConverter, InputUnitsInfo
 from ..exceptions import ConfigurationError, DataError, CalculationError
+from asteval import Interpreter
 
 class QuantityCalculator:
     def __init__(self, quantities, var_defs, preprocessors, regridder):
@@ -15,6 +18,11 @@ class QuantityCalculator:
         self.preprocessors = {}
         self.validations = {}
         self.quantities = []
+
+        # Create asteval interpreter with necessary modules
+        self.aeval = Interpreter()
+        # Add numpy to the interpreter's namespace
+        self.aeval.symtable['np'] = np
 
         for qname in quantities:
             vdef = self._get_vdef(var_defs, qname)
@@ -40,30 +48,22 @@ class QuantityCalculator:
                         prs = preprocessors[pp]
                     except KeyError:
                         raise ConfigurationError('Requested input preprocessor {} not found in configured variable definitions'.format(pp))
-                    try:
-                        self.preprocessors[pp] = compile(prs,
-                                '<quantity_preprocessor_{}>'.format(pp), 'exec')
-                    except SyntaxError:
-                        raise ConfigurationError('Syntax error in definition of the input preprocessor {}: "{}"'.format(pp, prs))
+                    # Store raw preprocessor code instead of compiled bytecode
+                    self.preprocessors[pp] = prs
 
             for val in getattr(vdef, 'validations', []):
                 if val not in self.validations:
-                    try:
-                        self.validations[val] = compile(val,
-                                '<quantity_validation>', 'eval')
-                    except SyntaxError:
-                        raise ConfigurationError('Syntax error in definition of the input validation: "{}"'.format(val))
+                    # Store raw validation code instead of compiled bytecode
+                    self.validations[val] = val
 
             q.attrs = {}
             if 'molar_mass' in vdef:
                 q.attrs['molar_mass'] = vdef.molar_mass
             for flag in getattr(vdef, 'flags', []):
-                q.attrs[flag] = __import__('numpy').int8(1)
+                q.attrs[flag] = np.int8(1)
 
-            try:
-                q.code = compile(q.formula, '<quantity_formula_{}>'.format(qname), 'eval')
-            except SyntaxError:
-                raise ConfigurationError('Syntax error in definition of the quantity {} formula: "{}"'.format(qname, q.formula))
+            # Store raw formula instead of compiled bytecode
+            q.formula = q.formula
             self.quantities.append(q)
 
     @staticmethod
@@ -105,23 +105,31 @@ class QuantityCalculator:
         return complete
 
     def validate_timestep(self, tsdata):
+        # Update interpreter's symtable with current tsdata
+        for key, value in tsdata.items():
+            self.aeval.symtable[key] = value
+
         for vs, val in self.validations.items():
             try:
-                if not eval(val, tsdata):
+                if not self.aeval(val):
                     raise DataError(f'Input validation {vs} failed!')
             except Exception as e:
                 raise CalculationError(f'Validation {vs} failed: {e}')
 
     def calc_timestep_species(self, tsdata):
+        # Update interpreter's symtable with current tsdata
+        for key, value in tsdata.items():
+            self.aeval.symtable[key] = value
+
         for pp in self.preprocessors.values():
             try:
-                exec(pp, tsdata)
+                self.aeval(pp)
             except Exception as e:
                 raise CalculationError(f'Preprocessor execution failed: {e}')
 
         for q in self.quantities:
             try:
-                value = eval(q.code, tsdata)
+                value = self.aeval(q.formula)
                 unit = q.unit
 
             # Assign default unit with directly loaded variables
