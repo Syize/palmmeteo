@@ -132,11 +132,13 @@ class QuantityCalculator:
                 value = self.aeval(q.formula)
                 unit = q.unit
 
-            # Assign default unit with directly loaded variables
-            if unit is None:
-                unit = getattr(tsdata['_units'], q.formula)
+                # Assign default unit with directly loaded variables
+                if unit is None:
+                    unit = getattr(tsdata['_units'], q.formula)
 
-            # Check for necessary unit conversion
-            value, unit = UnitConverter.convert(q.name, value, unit)
+                # Check for necessary unit conversion
+                value, unit = UnitConverter.convert(q.name, value, unit)
 
-            yield q.name, value, unit, q.attrs
+                yield q.name, value, unit, q.attrs
+            except Exception as e:
+                raise CalculationError(f'Quantity calculation failed for {q.name}: {e}')

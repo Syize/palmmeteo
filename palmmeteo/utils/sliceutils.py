@@ -4,7 +4,7 @@ sliceutils.py - Slice manipulation utilities
 This module contains classes and functions for extending and manipulating slices.
 """
 
-from typing import Union, Tuple
+from typing import Union, Tuple, Any
 
 class SliceExtender:
     __slots__ = ['slice_obj', 'slices']

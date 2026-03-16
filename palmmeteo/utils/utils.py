@@ -24,8 +24,8 @@ from .position import parse_pos, nearest_gridpt
 from .chunking import distribute, distribute_chunks
 from .fileutils import find_free_fname, assert_dir
 from .timeutils import NotWholeTimestep, tstep, DTIndexer
-from .netcdfutils import ensure_dimension, getvar
-from .workflow import Workflow
+from ..data.netcdfutils import ensure_dimension, getvar
+from ..workflow.workflow import Workflow
 from .sliceutils import SliceExtender, SliceBoolExtender
 
 __all__ = [

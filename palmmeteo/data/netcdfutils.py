@@ -5,6 +5,7 @@ This module contains utility functions for working with NetCDF files.
 """
 
 from ..exceptions import DataError
+from typing import Any
 
 def ensure_dimension(f: Any, dimname: str, dimsize: int) -> Any:
     """
