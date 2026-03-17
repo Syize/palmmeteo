@@ -28,7 +28,8 @@ import threading
 import netCDF4
 
 from .. import __doc__, __version__, signature
-from ..plugins import plugins as plg
+from ..plugins import pm, initialize_plugins, event_hooks
+from ..plugins import execute_event as plugin_execute
 from ..logging import die, warn, log, verbose, configure_log
 from .config import load_config, cfg
 from .runtime import rt, basic_init
@@ -43,20 +44,9 @@ def threading_excepthook(args):
     threading.current_thread().pmeteo_unhandled_exception = args
     threading.__excepthook__(args)
 
-def build_exec_queue(event, from_plugins):
-    # logika vytvareni fronty muze byt slozitejsi nez jen prosty seznam (strom, mozna paralelizace....)
-    queue = []
-    for plugin in from_plugins:
-        if isinstance(plugin, getattr(plg, plg.event_hooks[event]['class'])):
-            queue.append(plugin)
-
-    return queue
-
-def execute_event(event, from_plugins):
+def execute_event(event, **kwargs):
     log('========== Starting stage {} ==========', event)
-    queue = build_exec_queue(event, from_plugins)
 
-    kwargs = {}
     common_files = []
     all_ok = True
     this_stage_files = []
@@ -84,9 +74,9 @@ def execute_event(event, from_plugins):
             common_files.append(f)
             kwargs['fout'] = f
 
-        # Execute each plugin in a queue
-        for plugin in queue:
-            getattr(plugin, plg.event_hooks[event]['method'])(**kwargs)
+        # Execute each plugin in the queue
+        from ..plugins import execute_event as plugin_execute
+        results = plugin_execute(event, **kwargs)
     finally:
         for f in common_files:
             try:
@@ -144,7 +134,7 @@ def run(argv):
 
     # Load plugins as configured
     verbose('Initializing plugins')
-    plugins = [plg.plugin_factory(p) for p in cfg.plugins]
+    plugins = initialize_plugins(cfg.plugins)
 
     if workflow.snapshot_from:
         try:
@@ -160,7 +150,7 @@ def run(argv):
 
     # Execute all stages in the workflow
     for event in workflow:
-        execute_event(event, plugins)
+        execute_event(event)
 
     log('Finished all stages in the workflow.')
 

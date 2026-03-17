@@ -1,0 +1,35 @@
+
+case: test_case
+scenario: test_scenario
+dnum: 1
+
+output:
+  overwrite: false
+
+intermediate_files:
+  delete_after_success: false
+
+compute:
+  nthreads: 1
+
+verbosity: 1
+log_datetime: false
+
+tasks: []
+
+plugins: [
+  "palmmeteo_stdplugins.setup_staticdriver.StaticDriverPlugin",
+  "palmmeteo_stdplugins.setup.SetupPlugin",
+  "palmmeteo_stdplugins.write.WritePlugin"
+]
+
+workflow: [
+  "check_config"
+]
+
+paths:
+  base: "./test_case"
+  meteo: "./test_case/METEO"
+  input: "./test_case/INPUT"
+  intermediate: {}
+  snapshot: {}

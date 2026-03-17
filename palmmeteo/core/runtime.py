@@ -182,13 +182,18 @@ def basic_init(rt: RuntimeObj) -> None:
         except SyntaxError as e:
             raise ConfigurationError(f'Syntax error in definition of the path string "{key}": {e}', section='path_strings', key=key)
         try:
-            val = eval(code, cfg._settings)
+            val = eval(code, cfg.root)
         except Exception as e:
             raise ConfigurationError(f'Error while evaluating the path string "{key}": {e}', section='path_strings', key=key)
         rt.path_strings[key] = val
 
     paths = rt._get_child('paths')
     paths.base = cfg.paths.base.format(**rt.path_strings)
+    
+    # Ensure intermediate and snapshot paths exist even if not configured
+    intermediate = paths._get_child('intermediate')
+    snapshot = paths._get_child('snapshot')
+    
     for sect_name, sect_cfg in cfg.paths:
         if isinstance(sect_cfg, ConfigObj):
             path_sect = paths._get_child(sect_name)
