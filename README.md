@@ -71,25 +71,33 @@ scientific paper.
 
 ## Installation
 
-There are three basic ways to install PALM-meteo.
+There are four basic ways to install PALM-meteo.
 
-### Method 1: Simple minimal installation using PIP
+### Method 1: Simple minimal installation using uv (Recommended)
 
-PALM-meteo is available in PyPI and it can be installed with the simple
-command:
+PALM-meteo supports uv for package management, which provides faster and more reliable installations.
+
+1. First, install uv if you haven't already:
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. Install PALM-meteo:
+   ```bash
+   uv pip install palmmeteo
+   ```
+
+This will also install the `pmeteo` command for running PALM-meteo.
+
+### Method 2: Simple minimal installation using PIP
+
+PALM-meteo is available in PyPI and can be installed with the simple command:
 
     pip3 install palmmeteo
 
 This will also install the `pmeteo` command for running PALM-meteo.
-Depending on your operating system and environment, you may want to create
-a virtual environment first, or use the `--user` option, or use
-[pipx](https://pipx.pypa.io/) instead of pip.
 
-However, this method will install only the bare minimum to run PALM-meteo,
-without documentation and tests, so it is only recommended for experienced
-users who want a quick installation.
-
-### Method 2: Full in-place installation with a virtual environment {#method2}
+### Method 3: Full in-place installation with a virtual environment {#method2}
 
 This is the recommended method for most users.
 
@@ -108,7 +116,19 @@ This is the recommended method for most users.
    and create a symlink to the `pmeteo` command (which enables the virtual
    environment automatically).
 
-### Method 3: Advanced installation for developers
+### Method 4: Advanced installation for developers using uv
+
+1. Clone the PALM-meteo git repository.
+2. From within the repository directory, run:
+   ```bash
+   uv venv
+   uv pip install -r requirements.txt
+   uv pip install -e .
+   ```
+
+This will install PALM-meteo dependencies and create an editable installation.
+
+### Method 5: Advanced installation for developers using pip
 
 1. Clone the PALM-meteo git repository.
 2. Create and enable your own virtual environment if you prefer.
@@ -117,16 +137,39 @@ This is the recommended method for most users.
 
 ### Testing
 
-PALM-meteo comes with integration tests supplied.  When installed using [Method
+PALM-meteo comes with integration tests supplied. When installed using [Method
 2](#method2), the install script performs the tests at the end of a successful
-instalation. You may also exectute them at any time from the PALM-meteo install
-directory using the command
+installation. You may also execute them at any time from the PALM-meteo install
+directory.
 
-    tests/integration_tests/all_tests.sh
+#### Using uv (Recommended)
 
-or for indivudal tests:
+Run all tests:
+```bash
+uv run python -m pytest tests/ -v
+```
 
-    tests/integration_tests/test_XX_NAMEOFTEST.sh
+Run a specific test file:
+```bash
+uv run python -m pytest tests/unit_tests/core/test_plugins.py -v
+```
+
+Run the plugin system test:
+```bash
+uv run python test_plugin_system.py
+```
+
+#### Using Bash Scripts
+
+Run all tests:
+```bash
+tests/integration_tests/all_tests.sh
+```
+
+Run individual tests:
+```bash
+tests/integration_tests/test_XX_NAMEOFTEST.sh
+```
 
 You may also examine the directory `tests/integration_tests/simple_wrf` as
 a reference WRF case for PALM-meteo.
@@ -186,12 +229,36 @@ configuration defauls, which may be overwritten within the configuration file.
 
 ### Running the model
 
-With a prepared configuration file such as `myconfig.yaml`, simply run
+With a prepared configuration file such as `myconfig.yaml`, you have several options for running the model.
 
-    ./pmeteo -c myconfig.yaml
+#### Using uv
 
-in the project directory. See [Running PALM-meteo](docs/pages/running.md) for
-more information.
+If you have installed the project using uv, you can run:
+```bash
+uv run pmeteo -c myconfig.yaml
+```
+
+Or if you're in the project directory with the virtual environment activated:
+```bash
+source .venv/bin/activate
+pmeteo -c myconfig.yaml
+```
+
+#### Using the symlink (Method 2 installation)
+
+If you installed using Method 2, you can run:
+```bash
+./pmeteo -c myconfig.yaml
+```
+
+#### Using the setup script (Method 3 installation)
+
+If you installed using Method 3, you can run:
+```bash
+./pmeteo -c myconfig.yaml
+```
+
+For more information, see [Running PALM-meteo](docs/pages/running.md).
 
 ## Extending PALM-meteo
 

@@ -1,0 +1,58 @@
+#!/bin/sh
+
+# In-place setup script for PALM-meteo using uv package manager
+
+# Copyright 2018-2025 Institute of Computer Science of the Czech Academy of
+# Sciences, Prague, Czech Republic. Authors: Pavel Krc, OpenClaw
+#
+# This file is part of PALM-METEO.
+#
+# PALM-METEO is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# PALM-METEO is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# PALM-METEO. If not, see <https://www.gnu.org/licenses/>.
+
+set -e
+cd "$(dirname "$(which "$0")")"
+
+# Check if uv is installed
+if ! command -v uv &> /dev/null; then
+    echo "uv package manager not found. Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
+# Check if virtual environment exists
+if [ -e .venv ]; then
+    echo "Virtual environment directory already present, skipping creation."
+else
+    echo "Creating virtual environment using uv..."
+    uv venv
+fi
+
+echo "Activating virtual environment."
+. .venv/bin/activate
+
+echo "Installing PALM-meteo in-place using uv..."
+uv pip install --editable .
+
+if [ -e pmeteo ]; then
+    echo "Launcher script pmeteo is already present."
+else
+    echo "Linking launcher script pmeteo from the virtual environment."
+    ln -s .venv/bin/pmeteo .
+fi
+
+echo "Setup finished successfully."
+
+read -p "Would you like to run the tests now? [y] " ans
+if [ -z "$ans" -o "$ans" = y ]; then
+    uv run python -m pytest tests/ -v
+fi

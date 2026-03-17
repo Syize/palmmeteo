@@ -7,7 +7,7 @@ def test_plugin_system():
     # Create a simple mock object for argv
     class MockArgv:
         def __init__(self):
-            self.config = ['test_config.yaml']  # Use test configuration
+            self.config = ['examples/test_config.yaml']  # Use test configuration
             self.workflow = ['check_config']
             self.workflow_from = None
             self.workflow_to = None

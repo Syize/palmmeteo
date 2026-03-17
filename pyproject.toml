@@ -2,9 +2,26 @@
 requires = ["setuptools>=66", "setuptools_scm[toml]>=7"]
 build-backend = "setuptools.build_meta"
 
+[tool.uv]
+# UV specific configuration
+# This section contains configuration for the uv package manager
+
+# Dependencies
+# Note: Dependencies are still managed via requirements.txt for compatibility
+# with both pip and uv
+
+# Development dependencies
+[dependency-groups]
+test = ["pytest>=7.0"]
+doc = ["sphinx", "sphinx-rtd-theme"]
+dev = ["black", "isort", "flake8"]
+
+# Python version requirements
+# python = ">=3.10"
+
 [project]
 name = "palmmeteo"
-dynamic = ["version", "dependencies"]
+version = "2.7.4"
 authors = [
   { name="Pavel Krc", email="krc@cs.cas.cz" },
 ]
@@ -18,6 +35,17 @@ classifiers = [
     "Development Status :: 4 - Beta",
 ]
 license = {text = "GPL-3.0-or-later"}
+dependencies = [
+    "asteval>=1.0.8 ; python_full_version >= '3.10'",
+    "netcdf4>=1.7.2",
+    "numpy>=2.1 ; python_full_version >= '3.10'",
+    "pint>=0.23 ; python_full_version >= '3.9'",
+    "pyproj>=3.7 ; python_full_version >= '3.10'",
+    "pytest>=7.0",
+    "pyyaml>=6.0",
+    "pyzstd>=0.19.1 ; python_full_version < '3.14'",
+    "scipy>=1.15 ; python_full_version >= '3.10'",
+]
 
 [project.scripts]
 pmeteo = "palmmeteo:main"
