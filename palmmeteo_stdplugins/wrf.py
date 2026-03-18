@@ -522,6 +522,8 @@ class WRFRadPlugin(ImportPluginMixin):
 
         verbose('Processing loaded radiation values')
         if detect_timestep:
+            if not rad_data:
+                die('No radiation data loaded (no files with matching dates found)!')
             rad_data.sort()
         rad_data_uz = list(zip(*rad_data)) #unzip/transpose
 
